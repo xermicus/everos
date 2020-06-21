@@ -4,36 +4,21 @@
 #![test_runner(everos::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
-pub mod serial;
-pub mod vgabuf;
-
 use core::panic::PanicInfo;
-//use everos::println;
+use everos::println;
 
-#[no_mangle]
+#[no_mangle] // don't mangle the name of this function
 pub extern "C" fn _start() -> ! {
-    println!("Hellö Wörld! {}", 42);
-
-    #[cfg(test)]
     test_main();
-
     loop {}
 }
 
-#[cfg(not(test))]
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    println!("KERNEL PANIC!\n{}", info);
-    loop {}
-}
-
-#[cfg(test)]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     everos::test_panic_handler(info)
 }
 
 #[test_case]
-fn trivial_assertion() {
-    assert_eq!(1, 1);
+fn test_println() {
+    println!("test_println output");
 }

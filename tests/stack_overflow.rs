@@ -14,7 +14,7 @@ lazy_static! {
         unsafe {
             idt.double_fault
                 .set_handler_fn(test_double_fault_handler) // special handler for test
-                .set_stack_index(everos::gdesct::DOUBLE_FAULT_IST_INDEX);
+                .set_stack_index(everos::gdt::DOUBLE_FAULT_IST_INDEX);
         }
 
         idt
@@ -27,7 +27,7 @@ extern "x86-interrupt" fn test_double_fault_handler(
 ) -> ! {
     serial_println!("[ok]");
     QemuExit::Success.bb();
-    loop {}
+    everos::hlt_loop()
 }
 
 pub fn init_test_idt() {
@@ -38,7 +38,7 @@ pub fn init_test_idt() {
 pub extern "C" fn _start() -> ! {
     serial_print!("stack_overflow::stack_overflow...\t");
 
-    everos::gdesct::init();
+    everos::gdt::init();
     init_test_idt();
 
     // trigger a stack overflow

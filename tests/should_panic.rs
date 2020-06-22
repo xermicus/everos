@@ -9,7 +9,7 @@ pub extern "C" fn _start() -> ! {
     should_fail();
     serial_println!("[test did not panic]");
     QemuExit::Failed.bb();
-    loop {}
+    everos::hlt_loop()
 }
 
 fn should_fail() {
@@ -21,5 +21,5 @@ fn should_fail() {
 fn panic(_info: &PanicInfo) -> ! {
     serial_println!("[ok]");
     QemuExit::Success.bb();
-    loop {}
+    everos::hlt_loop()
 }

@@ -12,18 +12,18 @@ pub extern "C" fn _start() -> ! {
     everos::init();
 
     x86_64::instructions::interrupts::int3();
-    println!("Hello World! {}", 42);
+    println!("Hello World!");
 
     #[cfg(test)]
     test_main();
-    loop {}
+    everos::hlt_loop()
 }
 
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     println!("KERNEL PANIC!\n{}", info);
-    loop {}
+    everos::hlt_loop()
 }
 
 #[cfg(test)]

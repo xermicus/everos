@@ -7,8 +7,8 @@
 
 use core::panic::PanicInfo;
 
-pub mod gdesct;
-pub mod irupts;
+pub mod gdt;
+pub mod interrupts;
 pub mod serial;
 pub mod vgabuf;
 
@@ -31,12 +31,21 @@ impl QemuExit {
 }
 
 pub fn init() {
-    gdesct::init();
-    irupts::init_idt();
+    gdt::init();
+    interrupts::init_idt();
+    // SAFETY undefined behavior if the PIC is misconfigured
+    unsafe { interrupts::PICS.lock().initialize() };
+    x86_64::instructions::interrupts::enable();
+}
+
+pub fn hlt_loop() -> ! {
+    loop {
+        x86_64::instructions::hlt()
+    }
 }
 
 pub trait Testable {
-    fn run(&self) -> ();
+    fn run(&self);
 }
 
 impl<T> Testable for T
@@ -62,7 +71,7 @@ pub fn test_panic_handler(info: &PanicInfo) -> ! {
     serial_println!("[failed]\n");
     serial_println!("Error: {}\n", info);
     QemuExit::Failed.bb();
-    loop {}
+    hlt_loop()
 }
 
 /// Entry point for `cargo xtest`
@@ -71,7 +80,7 @@ pub fn test_panic_handler(info: &PanicInfo) -> ! {
 pub extern "C" fn _start() -> ! {
     init();
     test_main();
-    loop {}
+    hlt_loop()
 }
 
 #[cfg(test)]

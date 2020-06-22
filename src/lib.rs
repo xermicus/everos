@@ -7,6 +7,7 @@
 
 use core::panic::PanicInfo;
 
+pub mod gdesct;
 pub mod irupts;
 pub mod serial;
 pub mod vgabuf;
@@ -30,6 +31,7 @@ impl QemuExit {
 }
 
 pub fn init() {
+    gdesct::init();
     irupts::init_idt();
 }
 

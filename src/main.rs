@@ -8,11 +8,10 @@ pub mod serial;
 pub mod vgabuf;
 
 use core::panic::PanicInfo;
-//use everos::println;
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    println!("Hellö Wörld! {}", 42);
+    println!("Hello World! {}", 42);
 
     #[cfg(test)]
     test_main();

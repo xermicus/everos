@@ -5,14 +5,24 @@
 #![reexport_test_harness_main = "test_main"]
 
 use core::panic::PanicInfo;
-use everos::println;
+use everos::{print_panic, println};
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     everos::init();
 
+    unsafe {
+        println!("{}", *(0x2037d1 as *mut u32));
+    }
     x86_64::instructions::interrupts::int3();
     println!("Hello World!");
+
+    use x86_64::registers::control::Cr3;
+    let (level_4_page_table, _) = Cr3::read();
+    println!(
+        "Level 4 page table at: {:?}",
+        level_4_page_table.start_address()
+    );
 
     #[cfg(test)]
     test_main();
@@ -22,7 +32,7 @@ pub extern "C" fn _start() -> ! {
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    println!("KERNEL PANIC!\n{}", info);
+    print_panic!("KERNEL PANIC!\n{}", info);
     everos::hlt_loop()
 }
 

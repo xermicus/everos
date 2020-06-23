@@ -5,6 +5,11 @@ use spin::Mutex;
 use volatile::Volatile;
 
 #[macro_export]
+macro_rules! print_panic {
+    ($($arg:tt)*) => ($crate::vgabuf::_print_panic(format_args!($($arg)*)));
+}
+
+#[macro_export]
 macro_rules! print {
     ($($arg:tt)*) => ($crate::vgabuf::_print(format_args!($($arg)*)));
 }
@@ -13,6 +18,18 @@ macro_rules! print {
 macro_rules! println {
     () => ($crate::print!("\n"));
     ($($arg:tt)*) => ($crate::print!("{}\n", format_args!($($arg)*)));
+}
+
+#[doc(hidden)]
+pub fn _print_panic(args: fmt::Arguments) {
+    use core::fmt::Write;
+    let mut w = Writer {
+        column_position: 0,
+        color_code: ColorCode::new(Color::Red, Color::Black),
+        // SAFETY VGA mem ought to be mapped to this location
+        buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
+    };
+    w.write_fmt(args).unwrap();
 }
 
 #[doc(hidden)]

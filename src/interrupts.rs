@@ -1,7 +1,7 @@
 use lazy_static::lazy_static;
 use pic8259_simple::ChainedPics;
 use spin::Mutex;
-use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
+use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode};
 
 use crate::{gdt, print, println};
 
@@ -16,6 +16,7 @@ lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
         let mut idt = InterruptDescriptorTable::new();
         idt.breakpoint.set_handler_fn(breakpoint_handler);
+        idt.page_fault.set_handler_fn(page_fault_handler);
         // SAFETY "the caller must ensure that the used index is valid and not already used for another exception"
         unsafe {
             idt.double_fault.set_handler_fn(double_fault_handler)
@@ -98,9 +99,32 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: &mut Interrup
     }
 }
 
+extern "x86-interrupt" fn page_fault_handler(
+    stack_frame: &mut InterruptStackFrame,
+    error_code: PageFaultErrorCode,
+) {
+    use x86_64::registers::control::Cr2;
+    panic!(
+        "{}{}{:?}{}{:?}{}{:#?}",
+        "EXCEPTION: PAGE FAULT",
+        "\nAccessed Address: ",
+        Cr2::read(),
+        "\nError Code: ",
+        error_code,
+        "\n",
+        stack_frame,
+    );
+    // Below commented out because it will race when interrupted during printing
+    // println!("EXCEPTION: PAGE FAULT");
+    // println!("Accessed Address: {:?}", Cr2::read());
+    // println!("Error Code: {:?}", error_code);
+    // println!("{:#?}", stack_frame);
+    // hlt_loop();
+}
+
 #[test_case]
 fn test_breakpoint_exception() {
-    x86_64::instructions::interrupts::int3();
     // "By checking that the execution continues afterwards,
     // we verify that our breakpoint handler is working correctly"
+    x86_64::instructions::interrupts::int3();
 }

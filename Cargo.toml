@@ -22,7 +22,7 @@ name = "stack_overflow"
 harness = false
 
 [dependencies]
-bootloader = "0.9.3"
+bootloader = { version = "0.9.4", features = ["map_physical_memory"] }
 volatile = "0.2.6"  
 lazy_static = { version = "1.4", features = ["spin_no_std"] }
 spin = "0.5.2"

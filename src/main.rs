@@ -6,7 +6,7 @@
 
 use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
-use everos::{allocator, memory, memory::BootInfoFrameAllocator, print_panic, println};
+use everos::{memory, print_panic, println};
 use x86_64::{structures::paging::Page, VirtAddr};
 
 extern crate alloc;
@@ -16,17 +16,30 @@ entry_point!(kernel_main);
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     everos::init();
 
+    do_example_stuff(boot_info);
+
+    #[cfg(test)]
+    test_main();
+    everos::hlt_loop()
+}
+
+#[doc(hidden)]
+#[allow(unused)]
+fn do_example_stuff(boot_info: &'static BootInfo) {
+    // Print mapped virt addr pointing into kernel code
     unsafe {
         println!("{}", *(0x2037d1 as *mut u32));
     }
     x86_64::instructions::interrupts::int3();
     println!("Hello World!");
 
-    // Heap
-    let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
-    let mut mapper = unsafe { memory::init(phys_mem_offset) };
-    let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_map) };
-    allocator::init_heap(&mut mapper, &mut frame_allocator).expect("heap initialization failed");
+    // map an unused page
+    let (mut mapper, mut frame_allocator) = everos::create_heap(boot_info);
+    let page = Page::containing_address(VirtAddr::new(0));
+    memory::create_example_mapping(page, &mut mapper, &mut frame_allocator);
+    // write the string `New!` to the screen through the new mapping
+    let page_ptr: *mut u64 = page.start_address().as_mut_ptr();
+    unsafe { page_ptr.offset(400).write_volatile(0x_f021_f077_f065_f04e) };
 
     // Some allocation
     let heap_val = Box::new(42);
@@ -47,18 +60,6 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         "reference count is {} now",
         Rc::strong_count(&cloned_reference)
     );
-
-    // map an unused page
-    let page = Page::containing_address(VirtAddr::new(0));
-    memory::create_example_mapping(page, &mut mapper, &mut frame_allocator);
-
-    // write the string `New!` to the screen through the new mapping
-    let page_ptr: *mut u64 = page.start_address().as_mut_ptr();
-    unsafe { page_ptr.offset(400).write_volatile(0x_f021_f077_f065_f04e) };
-
-    #[cfg(test)]
-    test_main();
-    everos::hlt_loop()
 }
 
 #[cfg(not(test))]

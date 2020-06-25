@@ -8,11 +8,13 @@
 #![feature(const_fn)]
 #![feature(const_in_array_repeat_expressions)]
 
-#[cfg(test)]
-use bootloader::{entry_point, BootInfo};
-use core::panic::PanicInfo;
-
 extern crate alloc;
+#[cfg(test)]
+use bootloader::entry_point;
+use bootloader::BootInfo;
+use core::panic::PanicInfo;
+use memory::BootInfoFrameAllocator;
+use x86_64::{structures::paging::OffsetPageTable, VirtAddr};
 
 pub mod allocator;
 pub mod gdt;
@@ -45,6 +47,16 @@ pub fn init() {
     // SAFETY undefined behavior if the PIC is misconfigured
     unsafe { interrupts::PICS.lock().initialize() };
     x86_64::instructions::interrupts::enable();
+}
+
+pub fn create_heap(
+    boot_info: &'static BootInfo,
+) -> (OffsetPageTable<'_>, memory::BootInfoFrameAllocator) {
+    let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
+    let mut mapper = unsafe { memory::init(phys_mem_offset) };
+    let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_map) };
+    allocator::init_heap(&mut mapper, &mut frame_allocator).expect("heap initialization failed");
+    (mapper, frame_allocator)
 }
 
 pub fn hlt_loop() -> ! {

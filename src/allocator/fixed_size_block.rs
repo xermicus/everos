@@ -43,9 +43,6 @@ impl FixedSizeBlockAllocator {
     pub unsafe fn init(&mut self, heap_start: usize, heap_size: usize) {
         self.fallback_allocator.init(heap_start, heap_size);
     }
-}
-
-impl FixedSizeBlockAllocator {
     /// Allocates using the fallback allocator.
     fn fallback_alloc(&mut self, layout: Layout) -> *mut u8 {
         match self.fallback_allocator.allocate_first_fit(layout) {
@@ -66,10 +63,13 @@ fn list_index(layout: &Layout) -> Option<usize> {
 unsafe impl GlobalAlloc for Locked<FixedSizeBlockAllocator> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         let mut allocator = self.lock();
+
+        // Wanted size is not in block sizes
         if list_index(&layout).is_none() {
             return allocator.fallback_alloc(layout);
         }
 
+        // Wanted size is in block sizes and free blocks exist in the list
         let index = list_index(&layout).unwrap();
         if let Some(node) = allocator.list_heads[index].take() {
             allocator.list_heads[index] = node.next.take();

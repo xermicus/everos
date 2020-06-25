@@ -1,4 +1,5 @@
-use bootloader::bootinfo::MemoryMap;
+use bootloader::bootinfo::{MemoryMap, MemoryRegionType};
+
 use x86_64::{
     structures::paging::{
         FrameAllocator, Mapper, OffsetPageTable, Page, PageTable, PhysFrame, Size4KiB,
@@ -24,6 +25,7 @@ pub struct BootInfoFrameAllocator {
 impl BootInfoFrameAllocator {
     /// Create a FrameAllocator from the passed memory map.
     ///
+    /// # Safety
     /// This function is unsafe because the caller must guarantee that the passed
     /// memory map is valid. The main requirement is that all frames that are marked
     /// as `USABLE` in it are really unused.
@@ -34,8 +36,6 @@ impl BootInfoFrameAllocator {
         }
     }
 }
-
-use bootloader::bootinfo::MemoryRegionType;
 
 impl BootInfoFrameAllocator {
     /// Returns an iterator over the usable frames specified in the memory map.

@@ -6,8 +6,11 @@
 
 use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
-use everos::{memory, memory::BootInfoFrameAllocator, print_panic, println};
+use everos::{allocator, memory, memory::BootInfoFrameAllocator, print_panic, println};
 use x86_64::{structures::paging::Page, VirtAddr};
+
+extern crate alloc;
+use alloc::{boxed::Box, rc::Rc, vec, vec::Vec};
 
 entry_point!(kernel_main);
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
@@ -19,9 +22,31 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     x86_64::instructions::interrupts::int3();
     println!("Hello World!");
 
+    // Heap
     let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
     let mut mapper = unsafe { memory::init(phys_mem_offset) };
     let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_map) };
+    allocator::init_heap(&mut mapper, &mut frame_allocator).expect("heap initialization failed");
+
+    // Some allocation
+    let heap_val = Box::new(42);
+    println!("heap allocated value at {:p}", heap_val);
+    let mut vec = Vec::new();
+    for i in 0..500 {
+        vec.push(i);
+    }
+    println!("vec at {:p}", vec.as_slice());
+    let reference_counted = Rc::new(vec![1, 2, 3]);
+    let cloned_reference = reference_counted.clone();
+    println!(
+        "current reference count is {}",
+        Rc::strong_count(&cloned_reference)
+    );
+    core::mem::drop(reference_counted);
+    println!(
+        "reference count is {} now",
+        Rc::strong_count(&cloned_reference)
+    );
 
     // map an unused page
     let page = Page::containing_address(VirtAddr::new(0));
